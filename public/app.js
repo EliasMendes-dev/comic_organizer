@@ -23,7 +23,7 @@ const ehImagem = (nomeArquivo) => {
 
 const aplicarTema = (tema, botao) => {
     const ehEscuro = tema === "dark";
-    document.body.classList.toggle("modo-escuro", ehEscuro);
+    document.body.classList.toggle("dark-mode", ehEscuro);
 
     if (!botao) {
         return;
@@ -56,7 +56,7 @@ const inicializarAlternanciaAuxTema = () => {
     }
 
     botaoAlternancia.addEventListener("click", () => {
-        const proximoTema = document.body.classList.contains("modo-escuro") ? "light" : "dark";
+        const proximoTema = document.body.classList.contains("dark-mode") ? "light" : "dark";
         aplicarTema(proximoTema, botaoAlternancia);
         try {
             localStorage.setItem(CHAVE_TEMA, proximoTema);
@@ -683,10 +683,81 @@ const inicializarBotoesRenomeacao = () => {
     if (botaoGerarCBZ) botaoGerarCBZ.addEventListener("click", gerarCBZ);
 };
 
+const inicializarResizers = () => {
+    const resizers = document.querySelectorAll(".resizer");
+    const main = document.querySelector("main");
+
+    resizers.forEach((resizer) => {
+        resizer.addEventListener("mousedown", (e) => {
+            e.preventDefault();
+            document.body.classList.add("resizing");
+
+            const resizerIndex = parseInt(resizer.dataset.resizer);
+            const sections = main.querySelectorAll(".explorador-arquivos, .visualizacao, .configuracao-renomeacao");
+
+            if (resizerIndex === 1) {
+                // Resizer entre explorador e visualização
+                const leftSection = sections[0]; // explorador-arquivos
+                const rightSection = sections[1]; // visualização
+
+                const onMouseMove = (moveEvent) => {
+                    const mainRect = main.getBoundingClientRect();
+                    const newX = moveEvent.clientX - mainRect.left;
+
+                    const leftPercent = (newX / mainRect.width) * 100;
+                    const rightPercent = 100 - leftPercent;
+
+                    leftSection.style.flex = `${leftPercent} 1 0`;
+                    rightSection.style.flex = `${rightPercent} 1 0`;
+                };
+
+                const onMouseUp = () => {
+                    document.body.classList.remove("resizing");
+                    document.removeEventListener("mousemove", onMouseMove);
+                    document.removeEventListener("mouseup", onMouseUp);
+                };
+
+                document.addEventListener("mousemove", onMouseMove);
+                document.addEventListener("mouseup", onMouseUp);
+            } else if (resizerIndex === 2) {
+                // Resizer entre visualização e configuração
+                const leftSection = sections[1]; // visualização
+                const rightSection = sections[2]; // configuracao-renomeacao
+
+                const onMouseMove = (moveEvent) => {
+                    const mainRect = main.getBoundingClientRect();
+                    const newX = moveEvent.clientX - mainRect.left;
+
+                    // Calcular a posição relativa ao início da primeira seção
+                    const leftStart = leftSection.getBoundingClientRect().left - mainRect.left;
+                    const newLeftWidth = newX - leftStart;
+                    const rightWidth = mainRect.width - newX;
+
+                    const leftPercent = (newLeftWidth / mainRect.width) * 100;
+                    const rightPercent = (rightWidth / mainRect.width) * 100;
+
+                    leftSection.style.flex = `${leftPercent} 1 0`;
+                    rightSection.style.flex = `${rightPercent} 1 0`;
+                };
+
+                const onMouseUp = () => {
+                    document.body.classList.remove("resizing");
+                    document.removeEventListener("mousemove", onMouseMove);
+                    document.removeEventListener("mouseup", onMouseUp);
+                };
+
+                document.addEventListener("mousemove", onMouseMove);
+                document.addEventListener("mouseup", onMouseUp);
+            }
+        });
+    });
+};
+
 document.addEventListener("DOMContentLoaded", () => {
     inicializarAlternanciaAuxTema();
     inicializarUploadPasta();
     inicializarNavegacaoImagens();
     inicializarBotoesRenomeacao();
+    inicializarResizers();
     limparUploadsAoCarregar();
 });
