@@ -157,9 +157,10 @@ DC K.O. Guerra do Morcego (2025) #01 - 001.jpg
 
 * Drag & Drop completo
 * Suporte a mais formatos (PNG, WEBP)
-* Sistema de desfazer (undo)
 * Persistência de configurações
 * Interface ainda mais interativa
+* Cbr para Cbz direto
+* Alterar nome da pasta
 
 ---
 
