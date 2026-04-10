@@ -1,13 +1,11 @@
 const CHAVE_TEMA = "comicOrganizerTheme";
 const BASE_API = (() => {
-    const { protocol, hostname, port } = window.location;
-    const isHttp = protocol === "http:" || protocol === "https:";
-    if (!isHttp) {
+    const { hostname, port } = window.location;
+    // Se estiver em localhost com porta diferente de 3000, conectar à porta 3000 (desenvolvimento)
+    if (hostname === "localhost" && port && port !== "3000") {
         return "http://localhost:3000/api";
     }
-    if (port && port !== "3000") {
-        return `${protocol}//${hostname}:3000/api`;
-    }
+    // Caso contrário, usar caminho relativo (funciona em todos os casos: dev e produção)
     return "/api";
 })();
 
