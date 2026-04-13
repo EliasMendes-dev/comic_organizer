@@ -1,9 +1,10 @@
 const express = require("express");
 const router = express.Router();
 const upload = require("../config/multer");
-const { uploadPasta, clearUploads, clearOutput, listarPastas, deletarPasta, renomearArquivos, gerarCBZ } = require("../controllers/fileController");
+const { uploadPasta, clearUploads, clearOutput, listarPastas, deletarPasta, renomearArquivos, gerarCBZ, converterCBR } = require("../controllers/fileController");
 
 router.post("/upload", upload.array("files"), uploadPasta);
+router.post("/convert-cbr", upload.single("file"), converterCBR);
 router.post("/clear-uploads", clearUploads);
 router.post("/clear-output", clearOutput);
 router.get("/folders", listarPastas);

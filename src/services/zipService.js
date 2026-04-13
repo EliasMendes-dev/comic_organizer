@@ -29,10 +29,7 @@ const gerarZip = (diretorioOrigem, caminhoDestino, nome = "arquivo") => {
 
 // Gerar arquivo CBZ especificamente
 const gerarCBZ = (diretorioOrigem, caminhoDestino) => {
-    const nomeArquivo = `${path.basename(diretorioOrigem)}.cbz`;
-    const caminhoFinal = path.join(path.dirname(caminhoDestino), nomeArquivo);
-
-    return gerarZip(diretorioOrigem, caminhoFinal, nomeArquivo);
+    return gerarZip(diretorioOrigem, caminhoDestino, path.basename(caminhoDestino));
 };
 
 // Obter informações do arquivo ZIP

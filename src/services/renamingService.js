@@ -33,7 +33,7 @@ const renomearArquivosDiretorio = (dirOrigem, dirDestino, title, year, edition) 
                 // Se for imagem, renomear
                 if (ehImagem(item)) {
                     const ext = getExtension(item);
-                    const novoNome = `${title} (${year}) #${formatEdition(edition)} - ${formatPageNumber(contadorPagina)}${ext}`;
+                    const novoNome = `${title} (${year}) #${formatEdition(edition)} #${formatPageNumber(contadorPagina)}${ext}`;
                     const novoDestino = path.join(destino, novoNome);
 
                     fs.copyFileSync(caminhoOrigem, novoDestino);
@@ -73,7 +73,7 @@ const gerarPreviewRenomeacao = (diretorio, title, year, edition) => {
                 processar(caminhoItem);
             } else if (ehImagem(item)) {
                 const ext = getExtension(item);
-                const novoNome = `${title} (${year}) #${formatEdition(edition)} - ${formatPageNumber(contadorPagina)}${ext}`;
+                const novoNome = `${title} (${year}) #${formatEdition(edition)} #${formatPageNumber(contadorPagina)}${ext}`;
                 previews.push({
                     antiga: item,
                     nova: novoNome,

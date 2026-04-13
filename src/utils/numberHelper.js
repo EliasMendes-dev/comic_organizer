@@ -9,10 +9,10 @@ const isValidYear = (year) => {
     return !isNaN(yearNum) && yearNum >= 1938 && yearNum <= new Date().getFullYear() + 10;
 };
 
-// Validar edição
+// Validar edição (00-9999, sendo 00 para prelúdio)
 const isValidEdition = (edition) => {
     const edNum = parseInt(edition);
-    return !isNaN(edNum) && edNum >= 1 && edNum <= 9999;
+    return !isNaN(edNum) && edNum >= 0 && edNum <= 9999;
 };
 
 // Formatar número com zero-padding para página

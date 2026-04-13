@@ -6,7 +6,8 @@ const { uploadsDir } = require("../services/fileService");
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
         // Obter o nome da pasta do query param
-        const folderName = req.query.folderName || "upload";
+        // Para uploads de arquivo único (CBR), não criar pasta upload desnecessária
+        const folderName = req.query.folderName || path.basename(file.originalname, path.extname(file.originalname));
         const folderPath = path.join(uploadsDir, folderName);
 
         // Extrair o diretório relativo do arquivo (se houver subcaminho)

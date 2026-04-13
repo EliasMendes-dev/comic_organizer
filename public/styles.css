@@ -98,11 +98,17 @@ header {
     background-color: var(--fundo-terciario);
     width: 100%;
     display: flex;
-    align-items: center;
+    flex-direction: column;
     justify-content: space-between;
     padding: 1rem 1.5rem;
     border-bottom: 1px solid var(--cor-borda);
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+}
+
+.logoemenu {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
 }
 
 .logo {
@@ -148,6 +154,15 @@ header {
 
 .uploadpastaemodoclaroescuro button:last-child i {
     margin-right: 0;
+}
+
+.descricoes {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--texto-secundario);
+    width: 100%;
+    cursor: default;
 }
 
 
@@ -241,6 +256,20 @@ body.resizing {
 
 .titulodasecao i {
     color: var(--verde-primario);
+}
+
+.botao-lote {
+    margin-left: auto;
+    padding: 0.35rem 0.6rem;
+    font-size: var(--fonte-xs);
+    border-radius: 8px;
+    gap: 0.35rem;
+    text-transform: none;
+}
+
+.botao-lote:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
 /* Configuração de Renomeação */
@@ -719,4 +748,59 @@ footer {
     font-size: var(--fonte-sm);
     color: var(--texto-secundario);
     border-top: 1px solid var(--cor-borda);
+}
+
+/* Menu de Seleção */
+.overlay-menu {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 999;
+}
+
+.menu-selecao {
+    position: absolute;
+    top: 4rem;
+    left: 0.5rem;
+    background-color: var(--fundo-secundario);
+    border: 1px solid var(--cor-borda);
+    border-radius: 8px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    z-index: 1000;
+    min-width: 280px;
+    max-width: 400px;
+}
+
+.opcao-menu {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
+    background: none;
+    border: none;
+    border-bottom: 1px solid var(--cor-borda);
+    padding: 0.75rem 1rem;
+    color: var(--texto-primario);
+    font-size: var(--fonte-sm);
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    text-align: left;
+}
+
+.opcao-menu:last-child {
+    border-bottom: none;
+}
+
+.opcao-menu:hover {
+    background-color: var(--fundo-hover);
+}
+
+.opcao-menu i {
+    color: var(--verde-primario);
+    font-size: var(--fonte-base);
+    min-width: 1.2rem;
+    text-align: center;
 }
