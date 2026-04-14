@@ -19,6 +19,7 @@ let tipoSelecaoAtual = null; // "pasta", "cbr" ou "cbz"
 let cbzsCarregados = []; // Array com caminhos dos CBZs selecionados
 let pastaSelecionadaAtual = null;
 let pastasDisponiveis = [];
+let modoSelecaoTotal = false; // Novo estado para seleção total
 
 const obterMetadadosObrigatorios = () => {
     const titulo = document.querySelector("#novo-titulo")?.value.trim();
@@ -137,6 +138,127 @@ const atualizarBotaoPrincipal = () => {
         if (containerNomeCBZ) containerNomeCBZ.style.display = "none";
         if (botaoVisualizar) botaoVisualizar.style.display = "block";
         if (botaoRenomear) botaoRenomear.style.display = "block";
+    }
+
+    // Modificar texto if em modo seleção total e tipo pasta/cbr
+    if (modoSelecaoTotal && (tipoSelecaoAtual === "pasta" || tipoSelecaoAtual === "cbr") && botaoPrincipal) {
+        const tamanho = pastasDisponiveis.length;
+        if (tipoSelecaoAtual === "pasta") {
+            botaoPrincipal.innerHTML = `<i class="fas fa-file-archive"></i> Gerar CBZ (${tamanho})`;
+        } else {
+            botaoPrincipal.innerHTML = `<i class="fas fa-exchange-alt"></i> Converter para CBZ (${tamanho})`;
+        }
+    }
+};
+
+const aplicarClasseSelecionados = () => {
+    document.querySelectorAll(".folder-group").forEach((folderGroup) => {
+        folderGroup.classList.add("select-all-mode-active");
+    });
+};
+
+const removerClasseSelecionados = () => {
+    document.querySelectorAll(".folder-group").forEach((folderGroup) => {
+        folderGroup.classList.remove("select-all-mode-active");
+    });
+};
+
+const atualizarListaPastasMultiplas = () => {
+    const selecionadas = document.querySelectorAll(".folder-group[data-selected='true']");
+    if (selecionadas.length > 0 && tipoSelecaoAtual === "pasta") {
+        setEdicaoHabilitada(true);
+    }
+};
+
+const reordenarPastas = (sourceName, targetName) => {
+    // Encontrar índices das pastas
+    const sourceIdx = pastasDisponiveis.findIndex(p => p.name === sourceName);
+    const targetIdx = pastasDisponiveis.findIndex(p => p.name === targetName);
+
+    if (sourceIdx === -1 || targetIdx === -1) return;
+
+    // Reordenar array
+    const [pasta] = pastasDisponiveis.splice(sourceIdx, 1);
+    pastasDisponiveis.splice(targetIdx, 0, pasta);
+
+    // Re-renderizar a lista
+    renderizarPastas(pastasDisponiveis);
+};
+
+const toggleModoSelecaoTotal = () => {
+    modoSelecaoTotal = !modoSelecaoTotal;
+    const botaoSelecionar = document.querySelector("#botao-selecionar-tudo");
+    const botaoAcaoPrincipal = document.querySelector("#botao-acao-principal");
+
+    if (modoSelecaoTotal) {
+        // Ativar modo
+        if (botaoSelecionar) botaoSelecionar.classList.add("select-all-mode");
+        aplicarClasseSelecionados();
+        
+        // Permitir edição mesmo sem seleção de pasta
+        if (pastasDisponiveis.length > 0) {
+            setEdicaoHabilitada(true);
+        }
+        
+        // Atualizar botão de ação principal
+        if (tipoSelecaoAtual === null && pastasDisponiveis.length > 0) {
+            tipoSelecaoAtual = "pasta";
+        }
+        atualizarBotaoPrincipal();
+    } else {
+        // Desativar modo
+        if (botaoSelecionar) botaoSelecionar.classList.remove("select-all-mode");
+        removerClasseSelecionados();
+        
+        // Restaurar comportamento normal
+        const pastaAberta = document.querySelector(".folder-group.is-open");
+        if (!pastaAberta) {
+            setEdicaoHabilitada(false);
+        }
+        atualizarBotaoPrincipal();
+    }
+};
+
+const deletarTodosUploads = async () => {
+    if (pastasDisponiveis.length === 0) {
+        mostrarMensagem("✖ Nenhuma pasta para deletar", "erro");
+        return;
+    }
+
+    mostrarMensagem(`Deletando ${pastasDisponiveis.length} upload(s)...`, "info");
+    let deletados = 0;
+    let falhas = 0;
+
+    for (const pasta of pastasDisponiveis) {
+        try {
+            const response = await fetch(`/api/folders/${encodeURIComponent(pasta.name)}`, {
+                method: "DELETE",
+            });
+
+            if (response.ok) {
+                deletados++;
+            } else {
+                falhas++;
+            }
+        } catch (error) {
+            console.error(`Erro ao deletar ${pasta.name}:`, error);
+            falhas++;
+        }
+    }
+
+    // Recarregar a lista
+    await carregarPastas();
+    
+    // Limpar estado
+    if (modoSelecaoTotal) {
+        toggleModoSelecaoTotal();
+    }
+    limparTipoSelecao();
+
+    if (falhas === 0) {
+        mostrarMensagem(`✓ ${deletados} upload(s) deletado(s)`, "sucesso");
+    } else {
+        mostrarMensagem(`✓ ${deletados} deletado(s), ${falhas} erro(s)`, "info");
     }
 };
 
@@ -375,12 +497,20 @@ const inicializarDragDropPastas = () => {
 
     const onDragEnter = (e) => {
         e.preventDefault();
+        // Ignora se é um drag interno de reordenação
+        if (e.dataTransfer.types.includes("text/plain") && !e.dataTransfer.types.includes("Files")) {
+            return;
+        }
         contadorArraste += 1;
         explorador.classList.add("estan-arrastando");
     };
 
     const onDragLeave = (e) => {
         e.preventDefault();
+        // Ignora se é um drag interno de reordenação
+        if (e.dataTransfer.types.includes("text/plain") && !e.dataTransfer.types.includes("Files")) {
+            return;
+        }
         contadorArraste = Math.max(0, contadorArraste - 1);
         if (contadorArraste === 0) {
             explorador.classList.remove("estan-arrastando");
@@ -393,6 +523,12 @@ const inicializarDragDropPastas = () => {
 
     const onDrop = async (e) => {
         e.preventDefault();
+        
+        // Ignora se é um drag interno de reordenação
+        if (e.dataTransfer.types.includes("text/plain") && !e.dataTransfer.types.includes("Files")) {
+            return;
+        }
+        
         contadorArraste = 0;
         explorador.classList.remove("estan-arrastando");
 
@@ -493,9 +629,18 @@ const renderizarPastas = (pastas) => {
         const folderGroup = document.createElement("div");
         folderGroup.className = "folder-group";
         folderGroup.dataset.folderName = pasta.name;
+        folderGroup.dataset.selected = "false";
 
         const folderHeader = document.createElement("div");
         folderHeader.className = "folder-header";
+
+        const moveBtn = document.createElement("button");
+        moveBtn.className = "folder-move-btn";
+        moveBtn.innerHTML = '<i class="fas fa-grip-vertical"></i>';
+        moveBtn.title = "Arrastar para reordenar";
+        moveBtn.addEventListener("mousedown", (e) => {
+            e.stopPropagation();
+        });
 
         const caretBtn = document.createElement("button");
         caretBtn.className = "folder-caret-btn";
@@ -520,6 +665,7 @@ const renderizarPastas = (pastas) => {
             await deletarPasta(pasta.name);
         });
 
+        folderHeader.appendChild(moveBtn);
         folderHeader.appendChild(caretBtn);
         folderHeader.appendChild(folderToggle);
         folderHeader.appendChild(removeBtn);
@@ -562,11 +708,106 @@ const renderizarPastas = (pastas) => {
         });
 
         folderGroup.appendChild(filesList);
+        
+        // Adicionar listeners para seleção múltipla com Ctrl/Shift
+        folderToggle.addEventListener("click", (e) => {
+            if (e.ctrlKey || e.metaKey) {
+                e.stopPropagation();
+                const isSelected = folderGroup.dataset.selected === "true";
+                folderGroup.dataset.selected = isSelected ? "false" : "true";
+                folderGroup.classList.toggle("folder-selected", !isSelected);
+                atualizarListaPastasMultiplas();
+                return;
+            }
+            if (e.shiftKey) {
+                e.stopPropagation();
+                const todasPastas = Array.from(document.querySelectorAll(".folder-group"));
+                const indicePasta = todasPastas.indexOf(folderGroup);
+                const indiceUltimaSelecionada = todasPastas.findIndex(g => g.dataset.ultimaSelecionada === "true");
+                
+                if (indiceUltimaSelecionada !== -1) {
+                    const inicio = Math.min(indicePasta, indiceUltimaSelecionada);
+                    const fim = Math.max(indicePasta, indiceUltimaSelecionada);
+                    for (let i = inicio; i <= fim; i++) {
+                        todasPastas[i].dataset.selected = "true";
+                        todasPastas[i].classList.add("folder-selected");
+                        todasPastas[i].dataset.ultimaSelecionada = "false";
+                    }
+                    folderGroup.dataset.ultimaSelecionada = "true";
+                } else {
+                    folderGroup.dataset.selected = "true";
+                    folderGroup.classList.add("folder-selected");
+                    folderGroup.dataset.ultimaSelecionada = "true";
+                }
+                atualizarListaPastasMultiplas();
+                return;
+            }
+            // Clique normal - expandir/retrair
+            expandirMinimiazarPasta(folderGroup);
+        });
+        
+        // Listeners de drag-and-drop para reordenação
+        folderGroup.draggable = true;
+        
+        folderGroup.addEventListener("dragstart", (e) => {
+            // Desabilitar drag quando modo seleção total está ativo
+            if (modoSelecaoTotal) {
+                e.preventDefault();
+                return;
+            }
+            e.dataTransfer.effectAllowed = "move";
+            e.dataTransfer.setData("text/plain", pasta.name);
+            folderGroup.classList.add("folder-dragging");
+        });
+
+        folderGroup.addEventListener("dragend", () => {
+            folderGroup.classList.remove("folder-dragging");
+            document.querySelectorAll(".folder-group").forEach(group => {
+                group.classList.remove("folder-drag-over");
+            });
+        });
+
+        folderGroup.addEventListener("dragover", (e) => {
+            // Desabilitar drag quando modo seleção total está ativo
+            if (modoSelecaoTotal) {
+                return;
+            }
+            // Apenas permitir drag de pastas internas
+            if (e.dataTransfer.types.includes("text/plain")) {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = "move";
+                folderGroup.classList.add("folder-drag-over");
+            }
+        });
+
+        folderGroup.addEventListener("dragleave", (e) => {
+            if (!folderGroup.contains(e.relatedTarget)) {
+                folderGroup.classList.remove("folder-drag-over");
+            }
+        });
+
+        folderGroup.addEventListener("drop", (e) => {
+            // Desabilitar drag quando modo seleção total está ativo
+            if (modoSelecaoTotal) {
+                return;
+            }
+            const dataTransfer = e.dataTransfer.getData("text/plain");
+            if (dataTransfer && e.dataTransfer.types.includes("text/plain")) {
+                e.preventDefault();
+                e.stopPropagation();
+                const sourceName = dataTransfer;
+                if (sourceName && sourceName !== pasta.name) {
+                    reordenarPastas(sourceName, pasta.name);
+                }
+                folderGroup.classList.remove("folder-drag-over");
+            }
+        });
+        
         listaArquivos.appendChild(folderGroup);
     });
 
     atualizarContadorArquivos();
-    atualizarBotaoGerarTodos();
+    atualizarBotoesTopoExplorador();
 
     if (tipoSelecaoAtual === "pasta" || tipoSelecaoAtual === "cbr") {
         const pastaAberta = document.querySelector(".folder-group.is-open");
@@ -848,10 +1089,12 @@ const mostrarMensagem = (texto, tipo) => {
     }
 };
 
-const atualizarBotaoGerarTodos = () => {
-    const botao = document.querySelector("#botao-gerar-todos");
-    if (!botao) return;
-    botao.disabled = pastasDisponiveis.length === 0;
+const atualizarBotoesTopoExplorador = () => {
+    const botaoSelecionar = document.querySelector("#botao-selecionar-tudo");
+    const botaoDeletar = document.querySelector("#botao-deletar-tudo");
+    
+    if (botaoSelecionar) botaoSelecionar.disabled = pastasDisponiveis.length <= 1;
+    if (botaoDeletar) botaoDeletar.disabled = pastasDisponiveis.length <= 1;
 };
 
 const renomearArquivosParaPasta = async (nomePasta, titulo, anoNum, edicaoNum) => {
@@ -926,8 +1169,8 @@ const gerarConverterTodos = async () => {
     }
 
     const { titulo, anoNum, edicaoNum } = metadados;
-    const botaoGerarTodos = document.querySelector("#botao-gerar-todos");
-    if (botaoGerarTodos) botaoGerarTodos.disabled = true;
+    const botaoSelecionar = document.querySelector("#botao-selecionar-tudo");
+    if (botaoSelecionar) botaoSelecionar.disabled = true;
     setEdicaoHabilitada(false);
 
     let falhou = false;
@@ -949,15 +1192,109 @@ const gerarConverterTodos = async () => {
         }
     }
 
+    // Desativar modo seleção total e restaurar estado normal
+    if (modoSelecaoTotal) {
+        toggleModoSelecaoTotal();
+    }
+
     const pastaAberta = document.querySelector(".folder-group.is-open");
     setEdicaoHabilitada(Boolean(pastaAberta));
-    if (botaoGerarTodos) botaoGerarTodos.disabled = pastasDisponiveis.length === 0;
+    atualizarBotoesTopoExplorador();
+    
     if (!falhou) {
         mostrarMensagem("✓ Processamento em lote finalizado", "sucesso");
     }
 };
 
+const visualizarRenomeacaoTodos = async () => {
+    const metadados = obterMetadadosObrigatorios();
+    if (!metadados) {
+        return;
+    }
+    const { titulo, anoNum, edicaoNum } = metadados;
+
+    if (pastasDisponiveis.length === 0) {
+        mostrarMensagem("✗ Nenhuma pasta para visualizar", "erro");
+        return;
+    }
+
+    // Gerar preview para TODAS as pastas
+    const listaRenomeacao = document.querySelector(".visualizacao-renomeacao");
+    if (!listaRenomeacao) return;
+
+    listaRenomeacao.innerHTML = "";
+    let totalArquivos = 0;
+
+    for (let pastaIdx = 0; pastaIdx < pastasDisponiveis.length; pastaIdx++) {
+        const pasta = pastasDisponiveis[pastaIdx];
+        const edicaoAtual = edicaoNum + pastaIdx;
+
+        // Criar header de pasta
+        const headerPasta = document.createElement("li");
+        headerPasta.style.padding = "0.5rem 0.5rem";
+        headerPasta.style.fontSize = "var(--fonte-sm)";
+        headerPasta.style.fontWeight = "600";
+        headerPasta.style.color = "var(--verde-primario)";
+        headerPasta.style.backgroundColor = "rgba(45, 212, 138, 0.08)";
+        headerPasta.style.borderTop = "1px solid var(--cor-borda)";
+        headerPasta.textContent = `📁 ${pasta.name} (Edição #${String(edicaoAtual).padStart(2, "0")})`;
+        listaRenomeacao.appendChild(headerPasta);
+
+        // Listar arquivos da pasta
+        if (pasta.files && pasta.files.length > 0) {
+            pasta.files.forEach((arquivo, fileIdx) => {
+                const ext = arquivo.match(/\.[^/.]+$/)?.[0] || "";
+                const novoNome = `${titulo} (${anoNum}) #${String(edicaoAtual).padStart(2, "0")} #${String(fileIdx + 1).padStart(3, "0")}${ext}`;
+
+                const item = document.createElement("li");
+                item.style.padding = "0.3rem 0.5rem 0.3rem 1.5rem";
+                item.style.fontSize = "var(--fonte-xs)";
+                item.style.borderBottom = "1px solid var(--cor-borda)";
+                item.style.display = "flex";
+                item.style.gap = "0.4rem";
+                item.style.alignItems = "center";
+
+                const nomeAntigoEl = document.createElement("span");
+                nomeAntigoEl.textContent = arquivo;
+                nomeAntigoEl.style.color = "var(--texto-mudo)";
+                nomeAntigoEl.style.textDecoration = "line-through";
+                nomeAntigoEl.style.flex = "1";
+                nomeAntigoEl.style.fontSize = "var(--fonte-xs)";
+
+                const arrowEl = document.createElement("span");
+                arrowEl.textContent = "→";
+                arrowEl.style.color = "var(--verde-primario)";
+
+                const nomeNovoEl = document.createElement("span");
+                nomeNovoEl.textContent = novoNome;
+                nomeNovoEl.style.color = "var(--verde-primario)";
+                nomeNovoEl.style.fontWeight = "600";
+                nomeNovoEl.style.flex = "1";
+
+                item.appendChild(nomeAntigoEl);
+                item.appendChild(arrowEl);
+                item.appendChild(nomeNovoEl);
+                listaRenomeacao.appendChild(item);
+                totalArquivos++;
+            });
+        }
+    }
+
+    const contagem = document.querySelector("#contagem-visualizacao");
+    if (contagem) {
+        contagem.textContent = `(${totalArquivos} arquivo${totalArquivos !== 1 ? "s" : ""})`;
+    }
+
+    mostrarMensagem(`✓ Preview gerado para ${pastasDisponiveis.length} pasta(s) - ${totalArquivos} arquivo(s)`, "sucesso");
+};
+
 const visualizarRenomeacao = () => {
+    // Se em modo seleção total, visualizar todas as pastas
+    if (modoSelecaoTotal) {
+        visualizarRenomeacaoTodos();
+        return;
+    }
+
     const metadados = obterMetadadosObrigatorios();
     if (!metadados) {
         return;
@@ -1134,7 +1471,8 @@ const inicializarBotoesRenomeacao = () => {
     const botaoRenomear = document.querySelector("#botao-renomear");
     const botaoLimpar = document.querySelector("#botao-limpar");
     const botaoAcaoPrincipal = document.querySelector("#botao-acao-principal");
-    const botaoGerarTodos = document.querySelector("#botao-gerar-todos");
+    const botaoSelecionar = document.querySelector("#botao-selecionar-tudo");
+    const botaoDeletar = document.querySelector("#botao-deletar-tudo");
 
     if (botaoVisualizar) botaoVisualizar.addEventListener("click", visualizarRenomeacao);
     if (botaoRenomear) botaoRenomear.addEventListener("click", renomearArquivos);
@@ -1142,12 +1480,16 @@ const inicializarBotoesRenomeacao = () => {
         limparTipoSelecao();
         await limparUploadsManual();
     });
-    if (botaoGerarTodos) botaoGerarTodos.addEventListener("click", gerarConverterTodos);
+    if (botaoSelecionar) botaoSelecionar.addEventListener("click", toggleModoSelecaoTotal);
+    if (botaoDeletar) botaoDeletar.addEventListener("click", deletarTodosUploads);
     
     if (botaoAcaoPrincipal) {
         botaoAcaoPrincipal.addEventListener("click", () => {
-            if (tipoSelecaoAtual === "pasta" || tipoSelecaoAtual === "cbr") {
-                // Para pasta e CBR extraído, usar a mesma função
+            if (modoSelecaoTotal && (tipoSelecaoAtual === "pasta" || tipoSelecaoAtual === "cbr")) {
+                // Em modo seleção total, usar a função gerar/converter todos
+                gerarConverterTodos();
+            } else if (tipoSelecaoAtual === "pasta" || tipoSelecaoAtual === "cbr") {
+                // Modo normal
                 gerarCBZ();
             } else if (tipoSelecaoAtual === "cbz") {
                 criarOmnibus();

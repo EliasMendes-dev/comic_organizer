@@ -69,14 +69,15 @@
     font-family: var(--familia-fonte-padrao);
 }
 
-html,
-body {
+html {
     height: 100%;
 }
 
 body {
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden;
     color: var(--texto-primario);
-    min-height: 100vh;
     display: flex;
     flex-direction: column;
     align-items: stretch;
@@ -103,6 +104,7 @@ header {
     padding: 1rem 1.5rem;
     border-bottom: 1px solid var(--cor-borda);
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+    flex-shrink: 0;
 }
 
 .logoemenu {
@@ -171,8 +173,9 @@ main {
     display: flex;
     width: 100%;
     align-items: stretch;
-    flex: 1 0 auto;
+    flex: 1 0 0;
     min-height: 0;
+    overflow: hidden;
     background: linear-gradient(180deg, rgba(255, 255, 255, 0.015), transparent 40%);
 }
 
@@ -204,7 +207,6 @@ body.resizing {
 }
 
 
-
 .explorador-arquivos,
 .visualizacao,
 .configuracao-renomeacao {
@@ -213,6 +215,7 @@ body.resizing {
     display: flex;
     flex-direction: column;
     min-height: 0;
+    height: 100%;
     overflow: hidden;
 }
 
@@ -270,6 +273,61 @@ body.resizing {
 .botao-lote:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+}
+
+/* Botões de Topo do Explorador */
+.botoes-topo-explorador {
+    display: flex;
+    gap: 0.4rem;
+    margin-left: auto;
+}
+
+.botao-icone {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.2rem;
+    height: 2.2rem;
+    padding: 0;
+    background-color: transparent;
+    border: 1px solid var(--cor-borda);
+    border-radius: 6px;
+    color: var(--texto-secundario);
+    cursor: pointer;
+    font-size: var(--fonte-base);
+    transition: all 0.2s ease;
+}
+
+.botao-icone:hover:not(:disabled) {
+    background-color: var(--fundo-hover);
+    color: var(--verde-primario);
+    border-color: var(--verde-primario);
+}
+
+.botao-icone:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.botao-icone.select-all-mode {
+    background-color: var(--verde-primario);
+    color: var(--fundo-primario);
+    border-color: var(--verde-primario);
+}
+
+.botao-icone.select-all-mode i {
+    color: var(--fundo-primario);
+}
+
+.botao-icone.select-all-mode:hover:not(:disabled) {
+    background-color: var(--verde-hover);
+    border-color: var(--verde-hover);
+}
+
+.botao-icone.botao-deletar:hover:not(:disabled) {
+    background-color: rgba(224, 87, 87, 0.1);
+    color: var(--vermelho-primario);
+    border-color: var(--vermelho-primario);
 }
 
 /* Configuração de Renomeação */
@@ -381,8 +439,10 @@ button:active {
     list-style: none;
     margin: 0;
     padding: 0.6rem 0.6rem 1rem;
-    overflow: auto;
-    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    flex: 1 1 0;
+    min-height: 0;
 }
 
 .lista-arquivos {
@@ -390,6 +450,7 @@ button:active {
     display: flex;
     flex-direction: column;
     gap: 0.4rem;
+    overflow-y: auto;
 }
 
 .folder-group {
@@ -497,6 +558,17 @@ button:active {
     color: var(--verde-primario);
 }
 
+/* Modo de Seleção Total */
+.folder-group.select-all-mode-active .folder-toggle {
+    background-color: transparent;
+    border: 2px solid var(--verde-primario);
+    color: var(--texto-primario);
+}
+
+.folder-group.select-all-mode-active .folder-toggle:hover {
+    background-color: transparent;
+}
+
 .folder-remove {
     border: 1px solid transparent;
     background: transparent;
@@ -525,6 +597,100 @@ button:active {
     margin-right: 0;
 }
 
+.folder-move-btn {
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--texto-mudo);
+    width: 1.8rem;
+    height: 1.8rem;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: grab;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.folder-move-btn:hover {
+    background-color: rgba(45, 212, 138, 0.15);
+    color: var(--verde-primario);
+    border-color: rgba(45, 212, 138, 0.3);
+}
+
+.folder-move-btn:active {
+    cursor: grabbing;
+    background-color: rgba(45, 212, 138, 0.25);
+    border-color: var(--verde-primario);
+}
+
+/* Desabilitar drag quando em modo seleção total */
+.select-all-mode-active .folder-move-btn {
+    cursor: not-allowed;
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+.select-all-mode-active .folder-move-btn:hover {
+    background-color: transparent;
+    color: var(--texto-mudo);
+    border-color: transparent;
+}
+
+/* Múltipla seleção de pastas */
+.folder-group.folder-selected .folder-toggle {
+    background-color: rgba(45, 212, 138, 0.15);
+    border: 2px solid var(--verde-primario);
+    color: var(--verde-primario);
+}
+
+.folder-group.folder-selected .folder-toggle:hover {
+    background-color: rgba(45, 212, 138, 0.25);
+}
+
+/* Reordenação com visual melhorado */
+.folder-group.folder-dragging {
+    opacity: 0.6;
+    animation: pulse-drag 0.6s ease-in-out infinite;
+}
+
+.folder-group.folder-drag-over {
+    position: relative;
+}
+
+.folder-group.folder-drag-over::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--verde-primario), transparent);
+    animation: slide-in 0.4s ease-in-out;
+}
+
+.folder-group.folder-drag-over::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(180deg, rgba(45, 212, 138, 0.08) 0%, transparent 100%);
+    pointer-events: none;
+    border-radius: 6px;
+}
+
+@keyframes pulse-drag {
+    0%, 100% { opacity: 0.6; }
+    50% { opacity: 0.4; }
+}
+
+@keyframes slide-in {
+    from { width: 0; left: 50%; }
+    to { width: 100%; left: 0; }
+}
+
 .explorador-arquivos.estan-arrastando {
     border-color: rgba(45, 212, 138, 0.6);
     box-shadow: inset 0 0 0 1px rgba(45, 212, 138, 0.25);
@@ -533,25 +699,40 @@ button:active {
 .sobreposicao-arraste {
     position: absolute;
     inset: 3.2rem 0.6rem 3.2rem 0.6rem;
-    border: 1px dashed rgba(45, 212, 138, 0.55);
-    border-radius: 12px;
-    background: rgba(11, 13, 16, 0.8);
-    color: var(--texto-primario);
+    border: 2px dashed rgba(45, 212, 138, 0.7);
+    border-radius: 16px;
+    background: linear-gradient(135deg, rgba(45, 212, 138, 0.08) 0%, rgba(45, 212, 138, 0.04) 100%);
+    color: var(--verde-primario);
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 0.6rem;
-    font-size: var(--fonte-sm);
+    gap: 1rem;
+    font-size: var(--fonte-base);
+    font-weight: 600;
     text-align: center;
     opacity: 0;
     pointer-events: none;
-    transition: opacity 0.2s ease;
+    transition: all 0.3s ease;
     z-index: 2;
 }
 
 .explorador-arquivos.estan-arrastando .sobreposicao-arraste {
     opacity: 1;
+    background: linear-gradient(135deg, rgba(45, 212, 138, 0.12) 0%, rgba(45, 212, 138, 0.08) 100%);
+    border-color: var(--verde-primario);
+    box-shadow: inset 0 0 20px rgba(45, 212, 138, 0.15);
+}
+
+.sobreposicao-arraste i {
+    font-size: 2.5rem;
+    color: var(--verde-primario);
+    animation: bounce 2s infinite;
+}
+
+@keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
 }
 .folder-files {
     list-style: none;
@@ -628,11 +809,13 @@ button:active {
 }
 
 .visualizacao-conteudo {
-    flex: 1;
+    flex: 1 1 0;
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 1.5rem;
+    min-height: 0;
+    overflow-y: auto;
 }
 
 .placeholder-visualizacao {
@@ -667,7 +850,7 @@ button:active {
     display: flex;
     flex-direction: column;
     min-height: 0;
-    flex: 1;
+    flex: 1 1 0;
     border-top: 1px solid var(--cor-borda);
 }
 
@@ -748,6 +931,7 @@ footer {
     font-size: var(--fonte-sm);
     color: var(--texto-secundario);
     border-top: 1px solid var(--cor-borda);
+    flex-shrink: 0;
 }
 
 /* Menu de Seleção */
